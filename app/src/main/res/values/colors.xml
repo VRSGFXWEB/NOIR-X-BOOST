@@ -1,0 +1,12 @@
+<resources>
+    <color name="noir_black">#0A0607</color>
+    <color name="noir_charcoal">#15100F</color>
+    <color name="noir_crimson">#8B1E2B</color>
+    <color name="noir_crimson_deep">#5C1119</color>
+    <color name="noir_crimson_soft">#B23A47</color>
+    <color name="noir_gold_accent">#C9A66B</color>
+    <color name="noir_glass">#1AFFFFFF</color>
+    <color name="noir_glass_border">#33FFFFFF</color>
+    <color name="noir_text_primary">#F5EDEE</color>
+    <color name="noir_text_muted">#A8999B</color>
+</resources>
