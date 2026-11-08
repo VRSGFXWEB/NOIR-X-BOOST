@@ -1,9 +1,12 @@
-name: Build Noir x boost APK
+name: Extract To Code
 
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   extract:
@@ -20,57 +23,19 @@ jobs:
             exit 1
           fi
           echo "Extracting: $ZIP_FILE"
-          unzip -o -q "$ZIP_FILE" -d extracted_project
-          INNER=$(find extracted_project -mindepth 1 -maxdepth 1 -type d | head -n 1)
-          COUNT=$(find extracted_project -mindepth 1 -maxdepth 1 | wc -l)
+          unzip -o -q "$ZIP_FILE" -d /tmp/extracted
+          INNER=$(find /tmp/extracted -mindepth 1 -maxdepth 1 -type d | head -n 1)
+          COUNT=$(find /tmp/extracted -mindepth 1 -maxdepth 1 | wc -l)
           if [ "$COUNT" -eq 1 ] && [ -n "$INNER" ]; then
-            mv "$INNER"/* extracted_project/
+            mv "$INNER"/* /tmp/extracted/
           fi
-          echo "===== Isi hasil extract ====="
-          find extracted_project -maxdepth 3
+          cp -r /tmp/extracted/. .
+          rm -f "$ZIP_FILE"
 
-      - name: Upload extracted project
-        uses: actions/upload-artifact@v4
-        with:
-          name: extracted-project
-          path: extracted_project
-          include-hidden-files: true
-
-  build:
-    needs: extract
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download extracted project
-        uses: actions/download-artifact@v4
-        with:
-          name: extracted-project
-          path: extracted_project
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "17"
-
-      - name: Accept Android SDK licenses & install platform
+      - name: Commit extracted files back to repo
         run: |
-          export ANDROID_SDK_ROOT="$ANDROID_HOME"
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null || true
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: "8.7"
-
-      - name: Build debug APK
-        working-directory: extracted_project
-        env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
-        run: gradle assembleDebug --stacktrace
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NoirXBoost-debug-apk
-          path: extracted_project/app/build/outputs/apk/debug/*.apk
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -m "Auto-extract project zip" || echo "Tidak ada perubahan"
+          git push
