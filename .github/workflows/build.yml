@@ -1,8 +1,6 @@
-name: Extract To Code
+name: Extract Noir x boost
 
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
 
 permissions:
@@ -11,31 +9,48 @@ permissions:
 jobs:
   extract:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract project zip
+      - name: Extract ZIP
         run: |
           ZIP_FILE=$(find . -maxdepth 1 -iname "*.zip" | head -n 1)
+
           if [ -z "$ZIP_FILE" ]; then
-            echo "Tidak ada file .zip ditemukan di root repo."
+            echo "Tidak ada file .zip ditemukan di root repo!"
             exit 1
           fi
+
           echo "Extracting: $ZIP_FILE"
-          unzip -o -q "$ZIP_FILE" -d /tmp/extracted
-          INNER=$(find /tmp/extracted -mindepth 1 -maxdepth 1 -type d | head -n 1)
-          COUNT=$(find /tmp/extracted -mindepth 1 -maxdepth 1 | wc -l)
-          if [ "$COUNT" -eq 1 ] && [ -n "$INNER" ]; then
-            mv "$INNER"/* /tmp/extracted/
-          fi
-          cp -r /tmp/extracted/. .
+          mkdir -p extracted
+          unzip -o "$ZIP_FILE" -d extracted
           rm -f "$ZIP_FILE"
 
-      - name: Commit extracted files back to repo
+      - name: Move Project Files
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add -A
-          git commit -m "Auto-extract project zip" || echo "Tidak ada perubahan"
-          git push
+          shopt -s dotglob nullglob
+          ITEMS=(extracted/*)
+
+          if [ ${#ITEMS[@]} -eq 1 ] && [ -d "${ITEMS[0]}" ]; then
+            cp -a "${ITEMS[0]}"/. .
+          else
+            cp -a extracted/. .
+          fi
+
+          rm -rf extracted
+
+      - name: Commit Extracted Files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add -A -- . ':!.github/workflows/**'
+
+          if git diff --cached --quiet; then
+            echo "Tidak ada perubahan."
+          else
+            git commit -m "Extract Noir x boost project"
+            git push
+          fi
